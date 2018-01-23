@@ -121,8 +121,6 @@ namespace Server.Updater
                                 packetList.InsertRange(4, EncodeHelper.EncodeShort(packetSize, true));  // [ 2] Packet Length (Payload only)
                                 packetList.InsertRange(6, EncodeHelper.EncodeShort(3, true));           // [ 2] Packet Id
                                 packetList.InsertRange(8, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN01
-
-                                SendData(packetList.ToArray());
                             }
                             else
                             {
@@ -176,23 +174,23 @@ namespace Server.Updater
                                             productBytes = File.ReadAllBytes(filePath);
                                         }
 
-                                        writer.WriteQPangString("main", 63); // Filename
-                                        writer.Write(EncodeHelper.EncodeInteger(Constants.MainVersion, true));  // File version
-                                        writer.Write(EncodeHelper.EncodeInteger(productBytes.Length, true));    // File size
+                                        writer.WriteQPangString("main", 63);                                    // Product name
+                                        writer.Write(EncodeHelper.EncodeInteger(Constants.MainVersion, true));  // Product version
+                                        writer.Write(EncodeHelper.EncodeInteger(productBytes.Length, true));    // Product size
                                         break;
-                                        
-                                    /* case "somefile":
-                                        writer.WriteQPangString("somefile", 63); // Filename
-                                        writer.Write(EncodeHelper.EncodeInteger(456, true)); // File version
-                                        writer.Write(EncodeHelper.EncodeInteger(960, true)); // File size
-                                        break; */
+
+                                        /* case "somefile":
+                                            writer.WriteQPangString("somefile", 63);             // Product name
+                                            writer.Write(EncodeHelper.EncodeInteger(456, true)); // Product version
+                                            writer.Write(EncodeHelper.EncodeInteger(960, true)); // Product size
+                                            break; */
                                 }
 
                                 // Another file (this does not work properly..)
                                 /* if (productName == "main")
                                 {
-                                    writer.WriteQPangString("somefile", 63);                // Filename
-                                    writer.Write(EncodeHelper.EncodeInteger(800, true));    // File version
+                                    writer.WriteQPangString("somefile", 63);                // Produc namet
+                                    writer.Write(EncodeHelper.EncodeInteger(800, true));    // Product version
                                 } */
 
                                 // TODO: Not do this ugly hack, throws out of memory error otherwise.
