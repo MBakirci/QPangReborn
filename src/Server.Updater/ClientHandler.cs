@@ -1,16 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using NLog;
 using Reborn.Utils;
+using Reborn.Utils.Extensions;
 
 namespace Server.Updater
 {
     internal class ClientHandler
     {
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
         private readonly Socket _socket;
+
         private readonly IPEndPoint _remoteEndPoint;
 
         private readonly byte[] _buffer;
@@ -19,9 +24,9 @@ namespace Server.Updater
         {
             _socket = socket;
             _remoteEndPoint = (IPEndPoint)_socket.RemoteEndPoint;
-            _buffer = new byte[512];
+            _buffer = new byte[4096];
 
-            Console.WriteLine($"Accepted new connection from {_remoteEndPoint.Address}.");
+            Logger.Warn($"Accepted new connection from {_remoteEndPoint.Address}.");
         }
 
         public void WaitForData()
@@ -30,6 +35,13 @@ namespace Server.Updater
             {
                 _socket.BeginReceive(_buffer, 0, _buffer.Length, SocketFlags.None, ReceiveCallback, null);
             }
+        }
+
+        private void SendData(byte[] data)
+        {
+            _socket.Send(data);
+
+            Logger.Trace($"{"Sent",-8}: {data.Length} bytes");
         }
 
         private void ReceiveCallback(IAsyncResult ar)
@@ -42,75 +54,192 @@ namespace Server.Updater
                     _socket.Close();
                     _socket.Dispose();
 
-                    Console.WriteLine($"Connection from {_remoteEndPoint.Address} was dropped.");
+                    Logger.Warn($"Connection from {_remoteEndPoint.Address} was dropped.");
                     return;
                 }
 
-                var packet = new byte[byteCount];
-                Buffer.BlockCopy(_buffer, 0, packet, 0, byteCount);
-
-                /* Packet processor */
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine(BitConverter.ToString(packet));
-                Console.WriteLine(BitConverter.ToString(packet).Replace("-", ""));
-
-                var packetLength = EncodeHelper.DecodeShort(new[] { packet[1], packet[0] });
-                var packetHeader = EncodeHelper.DecodeShort(new[] { packet[3], packet[2] });
-                var command = EncodeHelper.DecodeShort(new[] { packet[7], packet[6] });
-
-                Console.WriteLine($"Packet Length [Short]: {packetLength}");
-                Console.WriteLine($"Packet ID [Short]: {packetHeader}");
-                Console.WriteLine($"Command [Short]: {command}");
-                Console.WriteLine($"Packet Raw: {Encoding.UTF8.GetString(packet)}");
-
-                /* 0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15
-                 * 10-00-11-00-04-00-01-00-01-00-00-00-E4-00-00-00
-                 * | Length
-                 *       | ID
-                 *             |?
-                 *                   | CMD
-                 *
-                 * Second Packet:
-                 *   CMD 7&8: Launcht het spel / gameguard update
-                 */
-
-                /* Packet responder */
-                var packetList = new List<byte>();
-                switch (command)
+                using (var packetBuffer = new MemoryStream(_buffer, 0, byteCount))
+                using (var packetReader = new BinaryReader(packetBuffer))
                 {
-                    case 1:
-                        /* Error example 
-                        List<byte> packetList = new List<byte>();
-                        packetList.AddRange(Encoder.CreatePadding(6)); // pos 0,1,2,3,4,5 (6)
-                        packetList.AddRange(Encoder.EncodeShort(99).Reverse()); // COMMAND pos 6,7 (2)
-                        packetList.AddRange(Encoder.CreatePadding(4)); // pos 8,9,10,11 (4)
-                        packetList.AddRange(Encoder.EncodeInteger(1337).Reverse()); // pos 12,13,14,15 (5)
-                        packetList.AddRange(Encoding.Unicode.GetBytes("l33t")); // pos 16+ */
+                    var packetLength = packetReader.ReadInt16();
+                    if (packetLength > packetReader.BaseStream.Length)
+                    {
+                        // TODO: Store in a buffer and wait for more.
+                        throw new Exception("Not enough bytes have been received to process packet.");
+                    }
 
-                        packetList.AddRange(EncodeHelper.CreatePadding(6));
-                        packetList.AddRange(EncodeHelper.EncodeShort(2).Reverse());
-                        packetList.AddRange(EncodeHelper.CreatePadding(8));
+                    // Show packet information.
+                    Logger.Trace($"{"Received",-8}: {byteCount} bytes with packet length {packetLength}.");
+                    Logger.Trace($"{"Bytes",-8}: {BitConverter.ToString(_buffer, 0, byteCount)}");
 
-                        _socket.Send(packetList.ToArray());
-                        break;
-                    case 6:
-                        packetList.AddRange(EncodeHelper.CreatePadding(6));
-                        packetList.AddRange(EncodeHelper.EncodeShort(8).Reverse());
-                        packetList.AddRange(EncodeHelper.CreatePadding(4));
+                    // [Packet Id 5] Payload FailReason (int, char[]) BROKEN
 
-                        _socket.Send(packetList.ToArray());
-                        break;
+                    var packetList = new List<byte>();
+                    short packetSize;
+
+                    // Handle packet by packet length.
+                    // TODO: Figure out the actual packet id.. so far packet length seems unique and always the same.
+                    switch (packetLength)
+                    {
+                        // Update "QPang.exe".
+                        case 16:
+                            packetBuffer.Position += 2;
+
+                            var unknown0 = packetReader.ReadInt16();        // 4    static
+                            var unknown1 = packetReader.ReadInt16();        // 1    static
+                            var unknown2 = packetReader.ReadInt32();        // 1    static
+                            var updaterVersion = packetReader.ReadInt32();  // 17   registry
+
+                            if (unknown0 != 4 || unknown1 != 1 || unknown2 != 1)
+                            {
+                                // Packet payload.
+                                packetList.AddRange(EncodeHelper.EncodeInteger(1, true));
+                                packetList.AddRange(Encoding.Unicode.GetBytes("Your updater is a bit messed up, please re-download.\0"));
+
+                                // Packet header.
+                                packetSize = (short) packetList.Count;
+                                packetList.InsertRange(0, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN00
+                                packetList.InsertRange(4, EncodeHelper.EncodeShort(packetSize, true));  // [ 2] Packet Length (Payload only)
+                                packetList.InsertRange(6, EncodeHelper.EncodeShort(5, true));           // [ 2] Packet Id
+                                packetList.InsertRange(8, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN01
+                            }
+                            else if (updaterVersion != Constants.UpdaterVersion)
+                            {
+                                // The updater should be updated.
+                                var currentDir = Path.GetDirectoryName(GetType().Assembly.Location);
+                                var filePath = Path.Combine(currentDir, "Files", Constants.UpdaterFile);
+                                var fileBytes = File.ReadAllBytes(filePath);
+
+                                // Packet payload.
+                                packetSize = 8;
+                                packetList.AddRange(EncodeHelper.EncodeInteger(Constants.UpdaterVersion, true)); // [ 4] FileVersion
+                                packetList.AddRange(EncodeHelper.EncodeInteger(fileBytes.Length, true));         // [ 4] FileSize
+                                packetList.AddRange(fileBytes);                                                  // [--] FileBytes
+
+                                // Packet header.
+                                packetList.InsertRange(0, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN00
+                                packetList.InsertRange(4, EncodeHelper.EncodeShort(packetSize, true));  // [ 2] Packet Length (Payload only)
+                                packetList.InsertRange(6, EncodeHelper.EncodeShort(3, true));           // [ 2] Packet Id
+                                packetList.InsertRange(8, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN01
+
+                                SendData(packetList.ToArray());
+                            }
+                            else
+                            {
+                                // All is good, next update process please.
+                                packetSize = 0;
+
+                                // Packet header.
+                                packetList.InsertRange(0, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN00
+                                packetList.InsertRange(4, EncodeHelper.EncodeShort(packetSize, true));  // [ 2] Packet Length (Payload only)
+                                packetList.InsertRange(6, EncodeHelper.EncodeShort(2, true));           // [ 2] Packet Id
+                                packetList.InsertRange(8, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN01
+                                
+                            }
+
+                            SendData(packetList.ToArray());
+                            break;
+
+                        // Update "main" files.
+                        case 272:
+                            packetBuffer.Position += 2;
+
+                            var unknown3 = packetReader.ReadInt16();    // 260      static
+                            var unknown4 = packetReader.ReadInt16();    // 6        static
+                            var unknown5 = packetReader.ReadInt32();    // 1        static
+
+                            var projectName = packetReader.ReadQPangString(64);
+                            var productName = packetReader.ReadQPangString(64);
+                            var productVersion = packetReader.ReadInt32();
+
+                            Logger.Trace($"Project Name: {projectName}");
+                            Logger.Trace($"Product Name: {productName}");
+                            Logger.Trace($"Project Version: {productVersion}");
+                            
+                            var productBytes = new byte[0];
+
+                            // Packet payload.
+                            using (var buffer = new MemoryStream())
+                            using (var writer = new BinaryWriter(buffer))
+                            {
+                                writer.Write(EncodeHelper.CreatePadding(128));
+
+                                // Main file.
+                                switch (productName)
+                                {
+                                    case "main":
+                                        if (productVersion != Constants.MainVersion)
+                                        {
+                                            var currentDir = Path.GetDirectoryName(GetType().Assembly.Location);
+                                            var filePath = Path.Combine(currentDir, "Files", "update.zip");
+
+                                            productBytes = File.ReadAllBytes(filePath);
+                                        }
+
+                                        writer.WriteQPangString("main", 63); // Filename
+                                        writer.Write(EncodeHelper.EncodeInteger(Constants.MainVersion, true));  // File version
+                                        writer.Write(EncodeHelper.EncodeInteger(productBytes.Length, true));    // File size
+                                        break;
+                                        
+                                    /* case "somefile":
+                                        writer.WriteQPangString("somefile", 63); // Filename
+                                        writer.Write(EncodeHelper.EncodeInteger(456, true)); // File version
+                                        writer.Write(EncodeHelper.EncodeInteger(960, true)); // File size
+                                        break; */
+                                }
+
+                                // Another file (this does not work properly..)
+                                /* if (productName == "main")
+                                {
+                                    writer.WriteQPangString("somefile", 63);                // Filename
+                                    writer.Write(EncodeHelper.EncodeInteger(800, true));    // File version
+                                } */
+
+                                // TODO: Not do this ugly hack, throws out of memory error otherwise.
+                                writer.Write((byte) 0);
+                                writer.Write((byte) 1);
+
+                                // Make sure we send a payload of 1320 bytes!
+                                writer.Write(new byte[1320 - buffer.Length]);
+
+                                packetList.AddRange(buffer.ToArray());
+                            }
+                            
+                            // Packet header.
+                            packetSize = (short)packetList.Count;
+                            packetList.InsertRange(0, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN00
+                            packetList.InsertRange(4, EncodeHelper.EncodeShort(packetSize, true));  // [ 2] Packet Length (Payload only)
+                            packetList.InsertRange(6, EncodeHelper.EncodeShort(8, true));           // [ 2] Packet Id
+                            packetList.InsertRange(8, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN01
+
+                            SendData(packetList.ToArray());
+
+                            // Send product to client.
+                            if (productBytes.Length != 0)
+                            {
+                                SendData(productBytes);
+                            }
+
+                            break;
+
+                        default:
+                            // Packet payload.
+                            packetList.AddRange(EncodeHelper.EncodeInteger(2, true));
+                            packetList.AddRange(Encoding.Unicode.GetBytes("Unknown packet was sent to the server.\0"));
+
+                            // Packet header.
+                            packetSize = (short)packetList.Count;
+                            packetList.InsertRange(0, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN00
+                            packetList.InsertRange(4, EncodeHelper.EncodeShort(packetSize, true));  // [ 2] Packet Length (Payload only)
+                            packetList.InsertRange(6, EncodeHelper.EncodeShort(5, true));           // [ 2] Packet Id
+                            packetList.InsertRange(8, EncodeHelper.CreatePadding(4));               // [ 4] UNKNOWN01
+                            break;
+                    }
                 }
-
-                /* Finalize */
-                Console.ResetColor();
-                Console.WriteLine("Received bytes: " + byteCount);
             }
             catch (Exception exception)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(exception.StackTrace);
-                Console.ResetColor();
+                Logger.Error(exception, "Something went wrong while processing a request");
             }
             finally
             {

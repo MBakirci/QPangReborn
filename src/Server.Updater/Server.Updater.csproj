@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="NLog" Version="4.5.0-rc04" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Reborn.Utils\Reborn.Utils.csproj" />
   </ItemGroup>
 

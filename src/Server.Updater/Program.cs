@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
+using NLog;
+using Reborn.Utils.Config;
 
 namespace Server.Updater
 {
@@ -17,37 +20,44 @@ namespace Server.Updater
     /// </summary>
     public class Program
     {
-        private static bool _keepRunning;
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
+        private static readonly ManualResetEvent KeepRunning = new ManualResetEvent(false);
+
+        private static bool _shuttingDown;
 
         private static Socket _serverSocket;
 
         public static void Main(string[] args)
         {
-            Console.Title = "QPangReborn | Server.Updater PROTOTYPE";
-            Console.WriteLine("Starting up Server.Updater.");
+            // Configure logger.
+            LogManager.Configuration = LogConfig.Create();
 
-            _keepRunning = true;
+            // Configure console.
+            Console.Title = "QPangReborn | Server.Updater PROTOTYPE";
+            Console.CancelKeyPress += (sender, eventArgs) =>
+            {
+                eventArgs.Cancel = true;
+                KeepRunning.Set();
+            };
+
+            // Start server.
+            Logger.Info("Starting up Server.Updater, press CTRL+C to exit properly.");
+            
             _serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             _serverSocket.Bind(new IPEndPoint(IPAddress.Any, 8000));
             _serverSocket.Listen(20);
 
+            // Start accepting connections.
             AcceptNewConnection();
 
-            while (_keepRunning)
-            {
-                var command = Console.ReadLine();
-                switch (command)
-                {
-                    case "exit":
-                    case "quit":
-                    case "q":
-                        _keepRunning = false;
-                        break;
-                }
-            }
+            // Wait until shutdown (CTL+C).
+            KeepRunning.WaitOne();
 
-            Console.WriteLine("Shutting down Server.Updater.");
+            // Shutdown server.
+            Logger.Warn("Shutting down Server.Updater.");
 
+            _shuttingDown = true;
             _serverSocket.Close();
             _serverSocket.Dispose();
 
@@ -57,14 +67,14 @@ namespace Server.Updater
 
         private static void AcceptNewConnection()
         {
-            Console.WriteLine("Waiting for a new connection.");
+            Logger.Trace("Waiting for a new connection.");
 
             _serverSocket?.BeginAccept(AcceptConnection, null);
         }
 
         private static void AcceptConnection(IAsyncResult ar)
         {
-            if (_serverSocket == null || !_keepRunning)
+            if (_serverSocket == null || _shuttingDown)
             {
                 return;
             }
