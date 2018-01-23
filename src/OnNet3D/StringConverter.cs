@@ -48,6 +48,11 @@ namespace OnNet3D
 
         public static string DecryptStream(string inputStr)
         {
+            if (inputStr.Length % 4 != 0)
+            {
+                throw new ArgumentException($"{nameof(inputStr)} must be a multiple of 4.");
+            }
+
             var input = Encoding.ASCII.GetBytes(inputStr);
             var output = new byte[inputStr.Length / 4];
 
