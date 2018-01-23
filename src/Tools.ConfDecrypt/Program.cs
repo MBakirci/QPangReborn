@@ -11,6 +11,8 @@ namespace Tools.ConfDecrypt
 
         private static void Main(string[] args)
         {
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(typeof(Program).Assembly.Location));
+
             // Make sure the directories exist.
             Directory.CreateDirectory(InputDirectory);
             Directory.CreateDirectory(OutputDirectory);

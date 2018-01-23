@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using NLog;
-using Reborn.Utils;
 using Server.Auth.Config;
-using Server.Auth.Net;
 
 namespace Server.Auth
 {
