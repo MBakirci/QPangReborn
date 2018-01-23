@@ -40,7 +40,7 @@ namespace OnNet3D
                 result[i * 4] = (byte) ((character >> 6) | mask);
                 result[i * 4 + 1] = (byte) ((character >> 4) | mask);
                 result[i * 4 + 2] = (byte) ((character >> 2) | mask);
-                result[i * 4 + 3] = (byte) ((character >> 0) | mask);
+                result[i * 4 + 3] = (byte) (character | mask);
             }
 
             return Encoding.ASCII.GetString(result);
