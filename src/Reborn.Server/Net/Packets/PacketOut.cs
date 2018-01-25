@@ -42,17 +42,26 @@ namespace Reborn.Server.Net.Packets
 
         public bool Encrypted => _encryption != null;
 
-        public PacketOut WriteEmpty(int amount)
+        public byte[] PacketRaw { get; private set; }
+
+        public PacketOut WriteEmpty(int amount, byte value = 0x00)
         {
             for (var i = 0; i < amount; i++)
             {
-                WriteByte(0x00);
+                WriteByte(value);
             }
 
             return this;
         }
 
         public PacketOut WriteByte(byte value)
+        {
+            _writer.Write(value);
+
+            return this;
+        }
+
+        public PacketOut WriteByte(sbyte value)
         {
             _writer.Write(value);
 
@@ -96,13 +105,16 @@ namespace Reborn.Server.Net.Packets
             packet[4] = payloadLength[0];
             packet[5] = payloadLength[1];
 
+            // Set packet length.
+            var packetLength = NetUtils.WriteShort((short)packet.Length);
+            packet[0] = packetLength[0];
+            packet[1] = packetLength[1];
+
+            PacketRaw = packet;
+
             if (_encryption == null)
             {
-                var packetLength = NetUtils.WriteShort((short) packet.Length);
-                packet[0] = packetLength[0];
-                packet[1] = packetLength[1];
-
-                return packet;
+                return PacketRaw;
             }
 
             var packetList = new List<byte>();

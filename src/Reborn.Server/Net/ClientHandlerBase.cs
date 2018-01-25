@@ -53,7 +53,7 @@ namespace Reborn.Server.Net
                          $"\t{"Length", -9}: {packet.Length}\n" +
                          $"\t{"Encrypted", -9}: {packet.Encrypted}\n" +
                          $"\t{"Hex dump", -9}:\n" +
-                         $"{HexUtils.HexDump(rawPacket)}");
+                         $"{HexUtils.HexDump(packet.PacketRaw)}");
 
             // Send to client.
             Socket.Send(rawPacket);
