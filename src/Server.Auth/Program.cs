@@ -3,7 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using NLog;
-using Server.Auth.Config;
+using Reborn.Utils.Config;
+using Server.Auth.Net;
 
 namespace Server.Auth
 {
@@ -31,7 +32,7 @@ namespace Server.Auth
         {
             Console.Title = "QPangReborn | Server.Auth PROTOTYPE";
 
-            LogManager.Configuration = NLogConfig.Create();
+            LogManager.Configuration = LogConfig.Create();
             Logger.Warn("Starting up Server.Auth.");
 
             _keepRunning = true;
@@ -82,7 +83,7 @@ namespace Server.Auth
 
             var clientSocket = _serverSocket.EndAccept(ar);
 
-            new Thread(() => new ClientHandler(clientSocket, _nextClientId++).WaitForData())
+            new Thread(() => new ClientHandler(_nextClientId++, clientSocket).WaitForData())
             {
                 IsBackground = true
             }.Start();

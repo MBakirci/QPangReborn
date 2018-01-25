@@ -1,10 +1,26 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
 
 namespace Reborn.Utils
 {
     public class HexUtils
     {
+        /// <summary>
+        ///     https://stackoverflow.com/a/321404
+        /// </summary>
+        /// <param name="hex"></param>
+        /// <returns></returns>
+        public static byte[] StringToByteArraySlow(string hex)
+        {
+            hex = hex.Replace(" ", "");
+
+            return Enumerable.Range(0, hex.Length)
+                .Where(x => x % 2 == 0)
+                .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+                .ToArray();
+        }
+
         /// <summary>
         ///     https://www.codeproject.com/Articles/36747/Quick-and-Dirty-HexDump-of-a-Byte-Array
         /// </summary>
