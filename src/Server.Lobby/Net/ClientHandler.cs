@@ -30,7 +30,7 @@ namespace Server.Lobby.Net
                 // Auth & initialize server browser.
                 case 600:
                     SendPacket(new PacketOut(601, Crypto.BlowfishSecond)
-                        .WriteEmpty(54)
+                        .WriteEmpty(50)
                         .WriteStringUnicode("Reborn...\0")
                     );
                     break;
