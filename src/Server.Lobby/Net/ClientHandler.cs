@@ -3,7 +3,7 @@ using Reborn.Server.Net;
 using Reborn.Server.Net.PacketProcessing;
 using Reborn.Server.Net.Packets;
 
-namespace Server.Auth.Net
+namespace Server.Lobby.Net
 {
     internal class ClientHandler : ClientHandlerBase
     {
@@ -27,16 +27,11 @@ namespace Server.Auth.Net
                     );
                     break;
 
-                // Login.
-                case 500:
-                    SendPacket(new PacketOut(501, Crypto.BlowfishSecond)
-                            .WriteEmpty(4)
-                            .WriteInt(0x0100007F)
-                            .WriteInt(0xAABB)
-                            .WriteInt(0xCCDD)
-                            .WriteInt(0xEEFF)
-                            .WriteInt(0x7777)
-                            // .WriteByte(new byte[] {0x05, 0x39}) ??
+                // Auth & initialize server browser.
+                case 600:
+                    SendPacket(new PacketOut(601, Crypto.BlowfishSecond)
+                        .WriteEmpty(54)
+                        .WriteStringUnicode("Reborn...\0")
                     );
                     break;
             }

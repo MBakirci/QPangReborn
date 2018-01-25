@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Server.Auth.Net.Utils;
-using Tools.PacketDecrypt.Lib;
+using System.Text;
+using Reborn.Server.Net.Utils;
+using Reborn.Utils.Crypto;
 
-namespace Server.Auth.Net.Packets
+namespace Reborn.Server.Net.Packets
 {
     /// <summary>
     ///     Packet being sent to the QPang client.
     /// </summary>
-    internal class PacketOut : IDisposable
+    public class PacketOut : IDisposable
     {
         private readonly MemoryStream _memory;
 
@@ -41,6 +42,16 @@ namespace Server.Auth.Net.Packets
 
         public bool Encrypted => _encryption != null;
 
+        public PacketOut WriteEmpty(int amount)
+        {
+            for (var i = 0; i < amount; i++)
+            {
+                WriteByte(0x00);
+            }
+
+            return this;
+        }
+
         public PacketOut WriteByte(byte value)
         {
             _writer.Write(value);
@@ -65,6 +76,13 @@ namespace Server.Auth.Net.Packets
         public PacketOut WriteInt(int value)
         {
             _writer.Write(NetUtils.WriteInt(value));
+
+            return this;
+        }
+
+        public PacketOut WriteStringUnicode(string value)
+        {
+            _writer.Write(Encoding.Unicode.GetBytes(value + "\0"));
 
             return this;
         }

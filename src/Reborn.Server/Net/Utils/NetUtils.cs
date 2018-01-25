@@ -1,4 +1,4 @@
-﻿namespace Server.Auth.Net.Utils
+﻿namespace Reborn.Server.Net.Utils
 {
     /// <summary>
     ///     Allows for byte-order consistency across multiple platforms.

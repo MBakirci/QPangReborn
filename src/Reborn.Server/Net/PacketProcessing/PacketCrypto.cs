@@ -1,9 +1,9 @@
 ﻿using System.Security.Cryptography;
-using Tools.PacketDecrypt.Lib;
+using Reborn.Utils.Crypto;
 
-namespace Server.Auth.Net.PacketProcessing
+namespace Reborn.Server.Net.PacketProcessing
 {
-    internal class PacketCrypto
+    public class PacketCrypto
     {
         private static readonly RNGCryptoServiceProvider RandomCrypto = new RNGCryptoServiceProvider();
         

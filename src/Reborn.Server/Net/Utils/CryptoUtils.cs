@@ -1,13 +1,18 @@
 ﻿using System;
 
-namespace Server.Auth.Net.Utils
+namespace Reborn.Server.Net.Utils
 {
     internal static class CryptoUtils
     {
         public static byte[] AppendChecksum(byte[] payload)
         {
             var extra = (payload.Length + 2) & 7;
-            if (extra == 0 || extra == 8)
+            if (extra == 0)
+            {
+                return payload;
+            }
+
+            if (extra == 8)
             {
                 throw new Exception($"Unable to get checksum of packet. [{extra} == 0 || {extra} == 8]");
             }

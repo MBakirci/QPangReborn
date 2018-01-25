@@ -1,16 +1,16 @@
 ﻿using System;
 using System.IO;
-using Server.Auth.Net.Packets;
+using Reborn.Server.Net.Packets;
 
-namespace Server.Auth.Net.PacketProcessing
+namespace Reborn.Server.Net.PacketProcessing
 {
-    internal class PacketProcessor
+    public class PacketProcessor
     {
-        private readonly ClientHandler _client;
+        private readonly ClientHandlerBase _client;
 
         private byte[] _bufferOld;
 
-        public PacketProcessor(ClientHandler client, int bufferSize)
+        public PacketProcessor(ClientHandlerBase client, int bufferSize)
         {
             _client = client;
             _bufferOld = new byte[0];

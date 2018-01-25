@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Reborn.Utils\Reborn.Utils.csproj" />
+    <ProjectReference Include="..\Reborn.Server\Reborn.Server.csproj" />
   </ItemGroup>
 
 </Project>

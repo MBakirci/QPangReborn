@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Tools.PacketDecrypt.Lib
+namespace Reborn.Utils.Crypto
 {
     /// <summary>
     ///     Original from https://github.com/Mikeprod/Blowfish-compat

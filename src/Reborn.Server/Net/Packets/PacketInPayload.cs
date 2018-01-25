@@ -1,9 +1,9 @@
 ﻿using System;
-using Server.Auth.Net.Utils;
+using Reborn.Server.Net.Utils;
 
-namespace Server.Auth.Net.Packets
+namespace Reborn.Server.Net.Packets
 {
-    internal class PacketInPayload
+    public class PacketInPayload
     {
         public PacketInPayload(byte[] payload)
         {

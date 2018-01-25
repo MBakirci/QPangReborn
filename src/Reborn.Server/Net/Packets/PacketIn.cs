@@ -1,13 +1,13 @@
 ﻿using System;
-using Server.Auth.Net.Utils;
-using Tools.PacketDecrypt.Lib;
+using Reborn.Server.Net.Utils;
+using Reborn.Utils.Crypto;
 
-namespace Server.Auth.Net.Packets
+namespace Reborn.Server.Net.Packets
 {
     /// <summary>
     ///     Packet received from QPang client.
     /// </summary>
-    internal class PacketIn
+    public class PacketIn
     {
         private readonly byte[] _packet;
 

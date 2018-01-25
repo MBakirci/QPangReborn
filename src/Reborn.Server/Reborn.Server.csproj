@@ -1,12 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Reborn.Server\Reborn.Server.csproj" />
+    <PackageReference Include="NLog" Version="4.5.0-rc04" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Reborn.Utils\Reborn.Utils.csproj" />
   </ItemGroup>
 
 </Project>

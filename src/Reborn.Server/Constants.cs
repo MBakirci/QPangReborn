@@ -1,6 +1,6 @@
 ﻿using Reborn.Utils;
 
-namespace Server.Auth
+namespace Reborn.Server
 {
     internal static class Constants
     {
