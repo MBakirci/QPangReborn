@@ -9,11 +9,9 @@ https://drive.google.com/drive/folders/0B94To1DD6pC7YnVPYkYtZzlBUTg
 ## How do I run QPang?
 
 1. Download and install `QPangSetup_NL 20120502.exe` from the GDrive folder.
-2. Download all files from the `20120502 Patch` folder and place them in the QPang installation folder.
+2. Download all files from the `20120502 Patch #2` folder and place them in the QPang installation folder.
 3. Rename or remove the "HShield" directory (I recommend to rename it so you have a backup).
-4. Execute `Run QPang.bat`.
-
-We have to bypass the launcher (`QPang.exe`) because the `Server.Updater` is not finished and it is quicker. It is also useful when you want to use OllyDbg or something else like it.
+4. Execute `Play QPang.bat`.
 
 ## How do I run the emulators?
 
